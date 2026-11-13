@@ -1,0 +1,41 @@
+# Competitors and pages to monitor.
+#
+# type:    pricing | changelog | blog | page | news
+# format:  html (a web page, default) | rss (RSS/Atom feed) | sitemap (new URLs = new posts)
+# render:  true for pages that only show content after JavaScript runs (needs Playwright)
+# ignore:  regexes; lines matching them are treated as noise (rotating banners, counters...)
+# include: sitemap only, a regex the URL must match (e.g. "/blog/")
+# active:  false pauses a source but keeps its history
+#
+# Prefer this file for a fixed list, or let the client edit the list in Google
+# Sheets: run `python -m agent sources --export-sheet` once, then set
+# SOURCES_FROM_SHEET=true.
+#
+# Demo: workflow-automation tools (all public pages, allowed by robots.txt).
+
+competitors:
+  - name: Zapier
+    sources:
+      - {type: pricing, url: "https://zapier.com/pricing"}
+      - {type: blog, url: "https://zapier.com/blog/feeds/latest/", format: rss}
+
+  - name: n8n
+    sources:
+      - {type: pricing, url: "https://n8n.io/pricing/"}
+      - {type: blog, url: "https://blog.n8n.io/rss/", format: rss}
+      - {type: changelog, url: "https://github.com/n8n-io/n8n/releases.atom", format: rss}
+
+  - name: Pipedream
+    sources:
+      - {type: pricing, url: "https://pipedream.com/pricing"}
+      - {type: page, url: "https://pipedream.com/"}
+
+  - name: Activepieces
+    sources:
+      - {type: pricing, url: "https://www.activepieces.com/pricing"}
+      - {type: changelog, url: "https://github.com/activepieces/activepieces/releases.atom", format: rss}
+
+  - name: IFTTT
+    sources:
+      - {type: pricing, url: "https://ifttt.com/plans"}
+      - {type: page, url: "https://ifttt.com/"}

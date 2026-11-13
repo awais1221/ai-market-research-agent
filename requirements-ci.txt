@@ -1,0 +1,13 @@
+# What the scheduled GitHub Actions runs need (no dashboard / vector search),
+# which keeps each run's install fast.
+pydantic>=2.6
+openai>=1.30
+python-dotenv>=1.0
+httpx>=0.27
+zstandard>=0.22
+brotli>=1.1
+beautifulsoup4>=4.12
+feedparser>=6.0
+pyyaml>=6.0
+gspread>=6.0
+google-auth>=2.29

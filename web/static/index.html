@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Market Research Agent</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="container topbar-inner">
+    <div class="brand">
+      <span class="brand-icon">📡</span>
+      <div>
+        <h1>AI Market Research Agent</h1>
+        <p class="tagline">Watches your competitors' pricing, launches and posts, and explains what changed</p>
+      </div>
+    </div>
+    <div class="pills" id="pills"></div>
+  </div>
+  <nav class="container tabs" id="tabs">
+    <button class="tab active" data-tab="overview" type="button">Overview</button>
+    <button class="tab" data-tab="changes" type="button">Changes</button>
+    <button class="tab" data-tab="digests" type="button">Digests</button>
+    <button class="tab" data-tab="ask" type="button">Ask</button>
+  </nav>
+</header>
+
+<main class="container">
+  <!-- Overview -->
+  <section id="tab-overview" class="tab-panel">
+    <div class="stats" id="stats"></div>
+    <div class="grid" id="competitors"></div>
+  </section>
+
+  <!-- Changes -->
+  <section id="tab-changes" class="tab-panel" hidden>
+    <div class="card filters">
+      <select id="f-competitor"><option value="">All competitors</option></select>
+      <select id="f-importance">
+        <option value="">Any importance</option>
+        <option value="high">High only</option>
+        <option value="high,medium">High + medium</option>
+      </select>
+      <select id="f-kind">
+        <option value="">All change types</option>
+        <option value="pricing_change">Pricing changes</option>
+        <option value="page_change">Page changes</option>
+        <option value="new_item">New posts / releases</option>
+      </select>
+      <span class="muted small" id="change-count"></span>
+    </div>
+    <ol class="timeline" id="timeline"></ol>
+  </section>
+
+  <!-- Digests -->
+  <section id="tab-digests" class="tab-panel" hidden>
+    <div id="digests"></div>
+  </section>
+
+  <!-- Ask -->
+  <section id="tab-ask" class="tab-panel" hidden>
+    <div class="ask-layout">
+      <div class="card chat">
+        <div class="messages" id="messages">
+          <div class="welcome" id="welcome">
+            <h2>Ask about your market</h2>
+            <p class="muted">Answers come only from the pages, posts and changes the agent collected, with sources you can check.</p>
+            <div class="suggestions" id="suggestions"></div>
+          </div>
+        </div>
+        <form class="composer" id="ask-form">
+          <textarea id="question" rows="1" maxlength="500" placeholder="e.g. Did anyone change their pricing in the last 6 months?"></textarea>
+          <button class="btn btn-primary" id="send-btn" type="submit">Ask</button>
+        </form>
+      </div>
+      <aside class="card sources-panel">
+        <h3>Sources</h3>
+        <div id="sources"><p class="muted small">Sources used in the answer appear here.</p></div>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<!-- Change detail -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-box card">
+    <button class="modal-close" id="modal-close" type="button" aria-label="Close">✕</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
