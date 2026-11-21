@@ -204,8 +204,31 @@ def analyze_change(source_type: str, competitor: str, diff_text: str,
     return result, "llm"
 
 
-def rule_item_analysis(title: str, source_type: str) -> Analysis:
+_VERSION_TAG = re.compile(r"^(?:[\w.-]+@|v(?:ersion)?\s*)?(\d+\.\d+(?:\.\d+)?)\b", re.I)
+_NOTE_HEADER = re.compile(r"^\s*v?\d+\.\d+(?:\.\d+)?\s*(?:\(\d{4}-\d\d-\d\d\))?\s*", re.I)
+
+
+def _release_summary(competitor: str, version: str, notes: str) -> str:
+    notes = _NOTE_HEADER.sub("", re.sub(r"\s+", " ", notes)).strip()
+    if len(notes) > 160:
+        notes = notes[:157].rsplit(" ", 1)[0] + "..."
+    lead = f"{competitor or 'They'} released version {version}"
+    return f"{lead}: {notes}" if len(notes) > 12 else f"{lead} (no release notes)."
+
+
+def rule_item_analysis(title: str, source_type: str, summary: str = "",
+                       competitor: str = "") -> Analysis:
+    """Fallback for one new post when the LLM can't be used."""
     lowered = title.lower()
+    version = _VERSION_TAG.match(title.strip())
+    if version is None and lowered.strip() in ("beta", "stable", "latest", "next"):
+        version = _VERSION_TAG.match(summary.strip())  # release tags named "beta" etc.
+    if version is not None:
+        number = version.group(1)
+        # x.y and x.y.0 are feature releases; anything else is a patch
+        feature = number.count(".") == 1 or number.endswith(".0")
+        return Analysis(summary=_release_summary(competitor, number, summary),
+                        importance="medium" if feature else "low", category="feature")
     if re.search(r"pric|plan|tier|free|discount|cost", lowered):
         importance, category = "high", "pricing"
     elif re.search(r"launch|introduc|announc|now available|acquir|raises|funding|"
@@ -254,5 +277,6 @@ def analyze_items(source_type: str, competitor: str, items: list[dict], storage=
                                            items[i]["summary"][:1500]), analysis.model_dump())
                 results[i] = (analysis, "llm")
             else:
-                results[i] = (rule_item_analysis(items[i]["title"], source_type), "rules")
+                results[i] = (rule_item_analysis(items[i]["title"], source_type,
+                                                 items[i]["summary"], competitor), "rules")
     return results  # type: ignore[return-value]

@@ -37,6 +37,7 @@ class RunSummary:
     alerts_sent: int = 0
     sheet_rows: int = 0
     llm_calls: int = 0
+    reanalyzed: int = 0
     seconds: float = 0.0
 
     def as_dict(self) -> dict:
@@ -45,12 +46,15 @@ class RunSummary:
                 "change_ids": self.changes, "errors": self.errors,
                 "source_warnings": self.source_warnings, "alerts_sent": self.alerts_sent,
                 "sheet_rows": self.sheet_rows, "llm_calls": self.llm_calls,
+                "reanalyzed": self.reanalyzed,
                 "seconds": round(self.seconds, 1)}
 
     def text(self) -> str:
         lines = [f"Checked {self.checked} source(s) in {self.seconds:.0f}s: "
                  f"{len(self.changes)} change(s), {self.unchanged} unchanged, "
                  f"{self.baselines} first snapshot(s), {self.llm_calls} AI call(s)."]
+        if self.reanalyzed:
+            lines.append(f"Added AI summaries to {self.reanalyzed} earlier change(s).")
         if self.alerts_sent or self.sheet_rows:
             lines.append(f"Telegram alerts: {self.alerts_sent}, Sheet rows: {self.sheet_rows}.")
         lines += [f"  ! {e}" for e in self.errors]
@@ -217,6 +221,49 @@ def check_source(storage: Storage, collector: Collector, src: sqlite3.Row,
     return status, [change_id] if change_id else []
 
 
+def reanalyze_rule_changes(storage: Storage, budget: analyzer.Budget, limit: int = 20) -> int:
+    """Give an AI summary to changes that only got the rule-based fallback
+    (the AI was down, over quota or not set up yet). Returns how many were fixed."""
+    if not get_settings().llm_configured:
+        return 0
+    pending = storage.rule_analyzed(limit)
+    fixed = 0
+    # posts: one batched call per source, like a normal run
+    by_source: dict[int, list[dict]] = {}
+    for change in pending:
+        if change["kind"] == "new_item" and change["item_id"]:
+            by_source.setdefault(change["source_id"], []).append(change)
+    for changes in by_source.values():
+        items = []
+        for change in changes:
+            item = storage.item(change["item_id"])
+            items.append({"title": item["title"], "summary": item["summary"] or ""})
+        first = changes[0]
+        results = analyzer.analyze_items(first["source_type"], first["competitor"], items,
+                                         storage, budget)
+        for change, (analysis, by) in zip(changes, results):
+            if by == "llm":
+                storage.set_analysis(change["id"], analysis.summary, analysis.importance,
+                                     analysis.category, analysis.why_it_matters, by)
+                fixed += 1
+    # page changes: one call each
+    for change in pending:
+        if change["kind"] == "new_item":
+            continue
+        plans = storage.pricing_for_snapshot(change["new_snapshot_id"]) \
+            if change["new_snapshot_id"] else None
+        analysis, by = analyzer.analyze_change(
+            change["source_type"], change["competitor"], change["diff_text"],
+            change["pricing_changes"], plans, storage, budget)
+        if by == "llm":
+            storage.set_analysis(change["id"], analysis.summary, analysis.importance,
+                                 analysis.category, analysis.why_it_matters, by)
+            fixed += 1
+    if fixed:
+        logger.info("Added AI summaries to %d earlier change(s)", fixed)
+    return fixed
+
+
 def should_alert(change: dict, settings: Settings) -> bool:
     threshold = IMPORTANCE_RANK.get(settings.alert_min_importance, 2)
     return IMPORTANCE_RANK.get(change["importance"], 0) >= threshold
@@ -270,6 +317,10 @@ def run(storage: Storage | None = None, collector: Collector | None = None,
         logger.info("%-28s %s%s", label, status,
                     f" ({len(change_ids)} change(s))" if change_ids else "")
 
+    try:
+        summary.reanalyzed = reanalyze_rule_changes(storage, budget)
+    except Exception as exc:  # a repair step must never break the run
+        logger.warning("Could not re-analyse earlier changes: %s", exc)
     summary.llm_calls = budget.used
     # ---- notify
     if telegram is not None:

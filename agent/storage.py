@@ -362,6 +362,13 @@ class Storage:
         sql += " ORDER BY c.effective_at DESC, c.id DESC LIMIT ? OFFSET ?"
         return [self._change(r) for r in self._q(sql, params + [limit, offset])]
 
+    def rule_analyzed(self, limit: int = 20) -> list[dict]:
+        """Newest changes that got the rule-based fallback instead of an AI summary."""
+        rows = self._q(self._CHANGE_SQL + " WHERE c.analyzed_by = 'rules' "
+                                          "ORDER BY c.effective_at DESC, c.id DESC LIMIT ?",
+                       (limit,))
+        return [self._change(r) for r in rows]
+
     def pending_alerts(self) -> list[dict]:
         rows = self._q(self._CHANGE_SQL + " WHERE c.notified = 0 AND c.origin = 'live' "
                                           "ORDER BY c.effective_at, c.id")

@@ -191,3 +191,25 @@ def test_renamed_heading_keeps_the_plan():
                                      removed="## Pro\n$33.33 /mo") == []
     assert confirmed_pricing_changes(changes, added="Everything in Pro, plus SSO",
                                      removed="## Pro\n$33.33 /mo") == changes
+
+
+def test_rule_summaries_get_replaced_once_the_ai_is_back(setup):
+    go, site, storage, tg, sh, llm = setup
+    go()
+    llm.fail = True
+    site.add("https://globex.test/", "<main><h1>Globex</h1><p>Automation for everyone.</p>"
+                                     "<p>Now with an AI agent builder for every team.</p></main>")
+    site.add("https://acme.test/feed",
+             rss([("https://acme.test/a", "Hello world", "Mon, 02 Nov 2026 10:00:00 GMT"),
+                  ("https://acme.test/b", "acme@2.4.1", "Tue, 03 Nov 2026 10:00:00 GMT")]),
+             ctype="application/rss+xml")
+    first = go()
+    assert {storage.change(i)["analyzed_by"] for i in first.changes} == {"rules"}
+
+    llm.fail = False
+    second = go()  # nothing new on the sites, but the AI is reachable again
+    assert second.reanalyzed == 2 and not second.changes
+    post, page = sorted((storage.change(i) for i in first.changes), key=lambda c: c["kind"])
+    assert page["analyzed_by"] == post["analyzed_by"] == "llm"
+    assert page["summary"] == "The page changed." and post["summary"] == "Post 1 summary."
+    assert go().reanalyzed == 0  # fixed once, not on every run

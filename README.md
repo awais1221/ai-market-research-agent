@@ -67,7 +67,7 @@ It also picked up non-pricing news, for example Pipedream joining Workday (Dec 2
 - **History from day one:** a backfill pulls a year of archived pricing pages from the free **Wayback Machine** and runs them through the same change detector.
 - **Runs itself on GitHub Actions:** a daily check and a Monday digest, free on public repos. The database is kept on a separate `data` branch, with a lock so two runs never overlap.
 - **Safe and polite:** it respects `robots.txt`, waits between requests, reads only public pages and collects no personal data. Secrets come only from `.env` or GitHub Secrets and the Telegram token is redacted from logs. The same change is never alerted or logged twice, and scraped text is treated as data in every prompt (prompt-injection defence) and neutralised before going into Sheets (formula injection).
-- **81 automated tests** that run offline with no API keys.
+- **83 automated tests** that run offline with no API keys.
 
 ## 🛠 Tech stack
 
@@ -195,7 +195,7 @@ From then on, `monitor.yml` checks the competitors every day at 06:00 UTC and `d
 pytest -v
 ```
 
-81 tests cover noise filtering and diffs, pricing comparison, the collector (robots.txt, retries, feeds, sitemaps) with mocked websites, the full run (baseline, real changes, noise-only changes, duplicate protection, failing sources, AI outages), the Wayback backfill, RAG filters and citations, the digest, Telegram (message splitting, retries, bot commands), Google Sheets (no duplicates, formula-injection protection, the Competitors tab) and the dashboard API. No API key or internet connection is needed.
+83 tests cover noise filtering and diffs, pricing comparison, the collector (robots.txt, retries, feeds, sitemaps) with mocked websites, the full run (baseline, real changes, noise-only changes, duplicate protection, failing sources, AI outages and the follow-up AI re-summary), the Wayback backfill, RAG filters and citations, the digest, Telegram (message splitting, retries, bot commands), Google Sheets (no duplicates, formula-injection protection, the Competitors tab) and the dashboard API. No API key or internet connection is needed.
 
 ## 🚧 Limitations
 
